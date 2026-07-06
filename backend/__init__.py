@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
@@ -13,24 +13,25 @@ db = SQLAlchemy()
 # CREATE APP
 # =========================
 def create_app():
-    app = Flask(__name__)
-
-    # =========================
-    # CORS CONFIGURATION
-    # Sessions need credentials support to work across requests
-    # =========================
-    CORS(app, supports_credentials=True)
-
     # =========================
     # PROJECT PATHS
     # =========================
     basedir = os.path.abspath(os.path.dirname(__file__))
+    frontend_path = os.path.join(basedir, "..", "frontend")
     db_path = os.path.join(
         basedir,
         "..",
         "instance",
         "SmartFarmScan.db"
     )
+
+    app = Flask(__name__, static_folder=frontend_path, static_url_path="")
+
+    # =========================
+    # CORS CONFIGURATION
+    # Sessions need credentials support to work across requests
+    # =========================
+    CORS(app, supports_credentials=True)
 
     # =========================
     # DATABASE CONFIGURATION
@@ -89,13 +90,14 @@ def create_app():
     )
 
     # =========================
-    # HOME ROUTE
+    # FRONTEND ROUTES
     # =========================
     @app.route("/")
     def home():
-        return {
-            "status": "success",
-            "message": "Smart Farm Scanner API is running."
-        }
+        return send_from_directory(app.static_folder, "index.html")
+
+    @app.route("/<path:filename>")
+    def serve_frontend(filename):
+        return send_from_directory(app.static_folder, filename)
 
     return app
