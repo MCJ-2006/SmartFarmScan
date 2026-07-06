@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Scan Simulator — Smart Farm Rover</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f7f5;
+    padding: 30px;
+    color: #14201a;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 20px; margin-bottom: 6px; }
+  p.subtitle { font-size: 13px; color: #6b7570; margin-bottom: 24px; }
+
+  .form-card {
+    background: #fff;
+    border: 1px solid #eaeeeb;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .form-card h3 { font-size: 14px; margin-bottom: 4px; color: #256d29; }
+  .form-card .hint { font-size: 11.5px; color: #6b7570; margin-bottom: 12px; }
+
+  label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; margin-top: 12px; color: #6b7570; }
+  label:first-of-type { margin-top: 0; }
+
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #eaeeeb; border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; background: #f9faf9;
+  }
+  textarea { resize: vertical; min-height: 50px; }
+
+  input[type="file"] {
+    width: 100%; padding: 10px; border: 1px dashed #256d29; border-radius: 8px;
+    font-size: 12.5px; background: #eaf6eb; cursor: pointer;
+  }
+
+  .file-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .file-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #eaeeeb; }
+  .file-preview .file-tag { font-size: 11px; background: #eaf6eb; color: #256d29; padding: 4px 8px; border-radius: 6px; }
+
+  .optional-toggle {
+    font-size: 12.5px; color: #256d29; font-weight: 600; cursor: pointer;
+    margin-bottom: 16px; display: inline-block;
+  }
+  .optional-fields { display: none; }
+  .optional-fields.show { display: block; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  button {
+    width: 100%;
+    background: #256d29; color: #fff; border: none;
+    padding: 14px; border-radius: 10px; font-weight: 700; font-size: 14px;
+    cursor: pointer; margin-top: 6px;
+  }
+  button:hover { background: #1e5722; }
+  button:disabled { background: #a0a8a2; cursor: not-allowed; }
+
+  #status {
+    margin-top: 16px; padding: 12px; border-radius: 10px; font-size: 13px; display: none;
+  }
+  .success { background: #eaf6eb; color: #256d29; display: block !important; }
+  .error { background: #ffebee; color: #e53935; display: block !important; }
+</style>
+</head>
+<body>
+
+  <h1>🤖 AI Scan Simulator</h1>
+  <p class="subtitle">Upload media and hit send. Everything else is optional — leave it blank and it fills itself in automatically.</p>
+
+  <form id="scanForm">
+
+    <!-- MEDIA UPLOAD — the only thing that actually matters -->
+    <div class="form-card">
+      <h3>📷 Media</h3>
+      <p class="hint">This is the main thing — upload and send.</p>
+
+      <label>Upload Video (optional, one file)</label>
+      <input type="file" id="videoInput" accept="video/*">
+      <div class="file-preview" id="videoPreview"></div>
+
+      <label>Upload Images (optional, multiple allowed)</label>
+      <input type="file" id="imageInput" accept="image/*" multiple>
+      <div class="file-preview" id="imagePreview"></div>
+    </div>
+
+    <!-- OPTIONAL DATA — collapsed by default -->
+    <span class="optional-toggle" id="toggleOptional">+ Add scan details manually (optional)</span>
+
+    <div class="optional-fields" id="optionalFields">
+      <div class="form-card">
+        <h3>🌱 Scan Data</h3>
+        <p class="hint">Leave blank to auto-generate.</p>
+
+        <label>Crop Type</label>
+        <input type="text" id="cropType" placeholder="Auto if blank e.g. Tomato">
+
+        <div class="two-col">
+          <div>
+            <label>Status</label>
+            <select id="status">
+              <option value="">Auto</option>
+              <option value="healthy">Healthy</option>
+              <option value="diseased">Diseased</option>
+            </select>
+          </div>
+          <div>
+            <label>Severity</label>
+            <select id="severity">
+              <option value="">Auto</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Disease Name</label>
+        <input type="text" id="diseaseName" placeholder="Auto if blank">
+
+        <label>AI Confidence (%)</label>
+        <input type="number" id="confidence" placeholder="Auto if blank" step="0.1" min="0" max="100">
+
+        <label>Recommendation</label>
+        <textarea id="recommendation" placeholder="Auto if blank"></textarea>
+      </div>
+
+      <div class="form-card">
+        <h3>🌡️ Environmental Conditions</h3>
+        <p class="hint">Leave blank to auto-generate.</p>
+        <div class="two-col">
+          <div>
+            <label>Temperature (°C)</label>
+            <input type="number" id="temperature" step="0.1" placeholder="Auto if blank">
+          </div>
+          <div>
+            <label>Humidity (%)</label>
+            <input type="number" id="humidity" step="0.1" placeholder="Auto if blank">
+          </div>
+        </div>
+        <label>Soil Moisture (%)</label>
+        <input type="number" id="soilMoisture" step="0.1" placeholder="Auto if blank">
+      </div>
+
+      <div class="form-card">
+        <h3>📍 Location Info</h3>
+        <p class="hint">Leave blank to auto-generate.</p>
+        <div class="two-col">
+          <div>
+            <label>Location / Zone</label>
+            <input type="text" id="location" placeholder="Auto if blank">
+          </div>
+          <div>
+            <label>Rover ID</label>
+            <input type="text" id="roverId" placeholder="Auto if blank">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">🚀 Send Scan to Backend</button>
+  </form>
+
+  <div id="status"></div>
+
+<script>
+  const API_URL = "http://127.0.0.1:5000/api/scans";
+
+  const videoInput = document.getElementById("videoInput");
+  const imageInput = document.getElementById("imageInput");
+  const videoPreview = document.getElementById("videoPreview");
+  const imagePreview = document.getElementById("imagePreview");
+
+  // ---------- TOGGLE OPTIONAL SECTION ----------
+  document.getElementById("toggleOptional").addEventListener("click", (e) => {
+    const fields = document.getElementById("optionalFields");
+    fields.classList.toggle("show");
+    e.target.textContent = fields.classList.contains("show")
+      ? "− Hide scan details"
+      : "+ Add scan details manually (optional)";
+  });
+
+  // ---------- FILE PREVIEWS ----------
+  videoInput.addEventListener("change", () => {
+    videoPreview.innerHTML = "";
+    if (videoInput.files.length) {
+      const tag = document.createElement("span");
+      tag.className = "file-tag";
+      tag.textContent = `🎥 ${videoInput.files[0].name}`;
+      videoPreview.appendChild(tag);
+    }
+  });
+
+  imageInput.addEventListener("change", () => {
+    imagePreview.innerHTML = "";
+    Array.from(imageInput.files).forEach(file => {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      imagePreview.appendChild(img);
+    });
+  });
+
+  // ---------- AUTO-GENERATE FALLBACK DATA ----------
+  function randomFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function randomBetween(min, max, decimals = 1) {
+    return (Math.random() * (max - min) + min).toFixed(decimals);
+  }
+
+  function generateAutoData() {
+    const crops = ["Tomato", "Maize", "Cassava", "Rice", "Beans"];
+    const diseases = ["Early Blight", "Leaf Rust", "Mosaic Virus", "Powdery Mildew", "Bacterial Wilt"];
+    const severities = ["low", "medium", "high"];
+    const zones = ["Zone A", "Zone B", "Zone C", "Zone D"];
+
+    const status = randomFrom(["healthy", "diseased"]);
+    const isDiseased = status === "diseased";
+
+    return {
+      crop_type: randomFrom(crops),
+      status: status,
+      disease_name: isDiseased ? randomFrom(diseases) : "",
+      severity: isDiseased ? randomFrom(severities) : "",
+      confidence: randomBetween(75, 99),
+      recommendation: isDiseased ? "Monitor closely and apply treatment if symptoms spread." : "",
+      temperature: randomBetween(22, 34),
+      humidity: randomBetween(45, 80),
+      soil_moisture: randomBetween(25, 55),
+      location: randomFrom(zones),
+      rover_id: "ROVER-01"
+    };
+  }
+
+  // ---------- SUBMIT ----------
+  document.getElementById("scanForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const statusBox = document.getElementById("status");
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending...";
+
+    const auto = generateAutoData();
+
+    // Use what the user typed, otherwise fall back to auto-generated value
+    const cropType = document.getElementById("cropType").value || auto.crop_type;
+    const status = document.getElementById("status").value || auto.status;
+    const diseaseName = document.getElementById("diseaseName").value || (status === "diseased" ? auto.disease_name : "");
+    const severity = document.getElementById("severity").value || (status === "diseased" ? auto.severity : "");
+    const confidence = document.getElementById("confidence").value || auto.confidence;
+    const recommendation = document.getElementById("recommendation").value || (status === "diseased" ? auto.recommendation : "");
+    const temperature = document.getElementById("temperature").value || auto.temperature;
+    const humidity = document.getElementById("humidity").value || auto.humidity;
+    const soilMoisture = document.getElementById("soilMoisture").value || auto.soil_moisture;
+    const location = document.getElementById("location").value || auto.location;
+    const roverId = document.getElementById("roverId").value || auto.rover_id;
+
+    const formData = new FormData();
+    formData.append("crop_type", cropType);
+    formData.append("status", status);
+    formData.append("disease_name", diseaseName);
+    formData.append("severity", severity);
+    formData.append("confidence", confidence);
+    formData.append("recommendation", recommendation);
+    formData.append("temperature", temperature);
+    formData.append("humidity", humidity);
+    formData.append("soil_moisture", soilMoisture);
+    formData.append("location", location);
+    formData.append("rover_id", roverId);
+
+    if (videoInput.files.length) {
+      formData.append("video", videoInput.files[0]);
+    }
+    Array.from(imageInput.files).forEach(file => {
+      formData.append("images", file);
+    });
+
+    try {
+      const res = await fetch(API_URL, { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (res.ok) {
+        statusBox.className = "success";
+        statusBox.textContent = `✅ Scan saved (ID: ${data.scan.id}) — ${cropType}, ${status}. Check your dashboard.`;
+        document.getElementById("scanForm").reset();
+        videoPreview.innerHTML = "";
+        imagePreview.innerHTML = "";
+      } else {
+        statusBox.className = "error";
+        statusBox.textContent = `❌ Error: ${data.message || "Something went wrong."}`;
+      }
+    } catch (err) {
+      statusBox.className = "error";
+      statusBox.textContent = `❌ Could not reach backend. Is Flask running?`;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "🚀 Send Scan to Backend";
+    }
+  });
+</script>
+
+</body>
+</html>

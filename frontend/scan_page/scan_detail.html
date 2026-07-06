@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan Detail — Smart Farm Rover</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --green: #256d29; --green-light: #4caf50; --green-bg: #eaf6eb;
+    --red: #e53935; --bg: #f4f7f5; --card-bg: #ffffff;
+    --text-dark: #14201a; --text-muted: #6b7570; --border: #eaeeeb;
+    --radius: 18px; --radius-sm: 14px;
+    --shadow: 0 1px 3px rgba(20,32,26,0.06), 0 6px 20px rgba(20,32,26,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-dark); padding-bottom: 40px; }
+
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 64px;
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; border-bottom: 1px solid var(--border); z-index: 100;
+  }
+  .back-link { text-decoration: none; color: var(--text-dark); font-size: 20px; }
+  .nav-title { font-size: 16px; font-weight: 800; }
+
+  .main-content { max-width: 700px; margin: 0 auto; padding: 84px 16px 40px; }
+
+  /* HERO GALLERY */
+  .hero-gallery { position: relative; margin-bottom: 14px; }
+  .gallery-track {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    border-radius: var(--radius); background: #000;
+    scrollbar-width: none;
+  }
+  .gallery-track::-webkit-scrollbar { display: none; }
+  .gallery-item {
+    flex: 0 0 100%; scroll-snap-align: start;
+    height: 320px; display: flex; align-items: center; justify-content: center;
+    background: #000;
+  }
+  /* FIX: contain instead of cover — shows the FULL image/video, no cropping */
+  .gallery-item img, .gallery-item video {
+    max-width: 100%; max-height: 100%;
+    width: auto; height: auto;
+    object-fit: contain;
+  }
+  .gallery-empty { color: #fff; font-size: 13px; opacity: 0.7; }
+
+  .gallery-label {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px; pointer-events: none;
+  }
+
+  .gallery-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.85); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--text-dark); z-index: 10;
+  }
+  .gallery-arrow.prev { left: 10px; }
+  .gallery-arrow.next { right: 10px; }
+  .gallery-arrow:hover { background: #fff; }
+  .gallery-arrow.hidden { display: none; }
+
+  .gallery-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+  .gallery-dots.hidden { display: none; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.2s ease; }
+  .dot.active { background: var(--green); width: 18px; border-radius: 4px; }
+
+  .download-row { display: flex; gap: 8px; margin: 16px 0 22px; }
+  .dl-btn {
+    flex: 1; text-align: center; background: var(--card-bg); border: 1px solid var(--border);
+    padding: 12px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; color: var(--text-dark);
+  }
+  .dl-btn:hover:not(:disabled) { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .dl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dl-btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .dl-btn.primary:hover { background: #1e5722; }
+  .dl-btn.loading { opacity: 0.7; cursor: wait; }
+
+  .verdict-bar {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .verdict-left h2 { font-size: 19px; font-weight: 800; }
+  .verdict-left p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .severity-badge { font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
+  .sev-high { background: #ffebee; color: var(--red); }
+  .sev-medium { background: #fff8e1; color: #f9a825; }
+  .sev-low, .sev-none { background: var(--green-bg); color: var(--green); }
+
+  .recommendation-card {
+    background: var(--green-bg); border-radius: var(--radius-sm);
+    padding: 16px; margin-bottom: 14px;
+  }
+  .recommendation-card h3 { font-size: 13px; color: var(--green); margin-bottom: 8px; }
+  .recommendation-text {
+    font-size: 13.5px; color: var(--text-dark); line-height: 1.6;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .read-more-btn {
+    background: none; border: none; color: var(--green); font-weight: 700;
+    font-size: 12.5px; margin-top: 8px; cursor: pointer; padding: 0;
+  }
+  .read-more-btn.hidden { display: none; }
+
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow);
+  }
+  .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  .confidence-bar-bg { background: var(--border); border-radius: 20px; height: 10px; overflow: hidden; margin-top: 8px; }
+  .confidence-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--green-light)); border-radius: 20px; }
+  .confidence-value { font-size: 22px; font-weight: 800; color: var(--green); }
+
+  .data-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .data-row:last-child { border-bottom: none; }
+  .data-row span:first-child { color: var(--text-muted); }
+  .data-row span:last-child { font-weight: 600; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-end; justify-content: center; z-index: 200;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-card {
+    background: #fff; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 480px; max-height: 75vh; overflow-y: auto;
+    padding: 24px; position: relative; animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--green-bg); border: none; border-radius: 50%;
+    width: 32px; height: 32px; font-size: 14px; cursor: pointer; color: var(--text-dark);
+  }
+  .modal-card h2 { font-size: 16px; margin-bottom: 14px; color: var(--green); }
+  .modal-card p { font-size: 14px; line-height: 1.7; color: var(--text-dark); white-space: pre-line; }
+
+  .loading-state { text-align: center; padding: 60px 0; color: var(--text-muted); font-size: 13px; }
+
+  /* HIDDEN REPORT TEMPLATE */
+  #reportTemplate { position: absolute; left: -9999px; top: 0;}
+  .report-page { width: 700px; padding: 36px; font-family: 'Inter', sans-serif; color: #14201a; background: #fff; }
+  .report-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #256d29; padding-bottom: 14px; margin-bottom: 22px; }
+  .report-header h1 { font-size: 20px; color: #256d29; }
+  .report-header .report-meta { font-size: 11px; color: #6b7570; text-align: right; }
+  .report-img { width: 100%; max-height: 280px; object-fit: contain; border-radius: 10px; margin-bottom: 8px; background: #f4f7f5; }
+  .report-img-caption { font-size: 10.5px; color: #6b7570; margin-bottom: 18px; }
+  .report-video-note { background: #eaf6eb; color: #256d29; font-size: 11px; padding: 8px 12px; border-radius: 8px; margin-bottom: 18px; }
+  .report-section { margin-bottom: 18px; }
+  .report-section h3 { font-size: 13px; color: #256d29; margin-bottom: 8px; border-bottom: 1px solid #eaeeeb; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .report-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid #f4f7f5; }
+  .report-row span:first-child { color: #6b7570; }
+  .report-row span:last-child { font-weight: 600; }
+  .report-footer { margin-top: 26px; padding-top: 14px; border-top: 1px solid #eaeeeb; font-size: 10px; color: #a0a8a2; text-align: center; }
+
+  @media (min-width: 600px) {
+    .modal-overlay { align-items: center; }
+    .modal-card { border-radius: 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="today_scan.html" class="back-link">←</a>
+    <h1 class="nav-title">Scan Detail</h1>
+    <span></span>
+  </header>
+
+  <main class="main-content" id="pageContent">
+    <p class="loading-state">Loading scan...</p>
+  </main>
+
+  <div class="modal-overlay" id="recModal">
+    <div class="modal-card">
+      <button class="modal-close" id="closeRecModal">✕</button>
+      <h2>💡 Full Recommendation</h2>
+      <p id="recFullText"></p>
+    </div>
+  </div>
+
+  <div id="reportTemplate"></div>
+
+<script>
+  const BACKEND_ORIGIN = "http://127.0.0.1:5000";
+  const API_BASE = `${BACKEND_ORIGIN}/api/scans`;
+
+  const params = new URLSearchParams(window.location.search);
+  const scanId = params.get("id");
+
+  let currentScan = null;
+  let mediaItems = [];
+
+  function toFullUrl(path) {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    return `${BACKEND_ORIGIN}${path}`;
+  }
+
+  // ---------- FIX FOR BLANK PDF: fetch image, convert to base64 ----------
+  // This avoids the CORS/canvas-tainting issue that was producing empty reports.
+  async function urlToBase64(url) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error("Failed to load image for report:", err);
+      return null;
+    }
+  }
+
+  async function loadScan() {
+    const content = document.getElementById("pageContent");
+    if (!scanId) {
+      content.innerHTML = `<p class="loading-state">No scan ID provided.</p>`;
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/${scanId}`);
+      const data = await res.json();
+      currentScan = data.scan;
+      renderPage(currentScan);
+    } catch (err) {
+      content.innerHTML = `<p class="loading-state">Could not load scan. Is the backend running?</p>`;
+    }
+  }
+
+  function renderPage(s) {
+    const state = s.status === "healthy" ? "none" : (s.severity || "medium");
+    const content = document.getElementById("pageContent");
+
+    mediaItems = [];
+    if (s.video_url) mediaItems.push({ type: "video", url: toFullUrl(s.video_url) });
+
+    if (Array.isArray(s.images) && s.images.length) {
+      s.images.forEach(url => mediaItems.push({ type: "image", url: toFullUrl(url) }));
+    } else if (s.image_url) {
+      mediaItems.push({ type: "image", url: toFullUrl(s.image_url) });
+    }
+
+    const galleryHTML = mediaItems.length
+      ? mediaItems.map(m => `
+          <div class="gallery-item">
+            ${m.type === "video"
+              ? `<video src="${m.url}" controls></video>`
+              : `<img src="${m.url}" alt="${s.crop_type}">`
+            }
+          </div>
+        `).join("")
+      : `<div class="gallery-item"><span class="gallery-empty">No media available for this scan</span></div>`;
+
+    const hasVideo = !!s.video_url;
+    const hasImages = mediaItems.some(m => m.type === "image");
+
+    content.innerHTML = `
+      <div class="hero-gallery">
+        <div class="gallery-track" id="galleryTrack">${galleryHTML}</div>
+        <span class="gallery-label" id="galleryLabel"></span>
+        <button class="gallery-arrow prev" id="prevArrow">‹</button>
+        <button class="gallery-arrow next" id="nextArrow">›</button>
+        <div class="gallery-dots" id="galleryDots"></div>
+      </div>
+
+      <div class="download-row">
+        <button class="dl-btn" id="downloadVideoBtn" ${!hasVideo ? "disabled" : ""}>⬇ Video</button>
+        <button class="dl-btn" id="downloadImagesBtn" ${!hasImages ? "disabled" : ""}>⬇ Images</button>
+        <button class="dl-btn primary" id="downloadReportBtn">📄 Report</button>
+      </div>
+
+      <div class="verdict-bar">
+        <div class="verdict-left">
+          <h2>${s.crop_type}</h2>
+          <p>${s.disease_name || "No disease detected"}</p>
+        </div>
+        <span class="severity-badge sev-${state}">${(s.severity || s.status).toUpperCase()}</span>
+      </div>
+
+      ${s.recommendation ? `
+      <div class="recommendation-card">
+        <h3>💡 Recommendation</h3>
+        <p class="recommendation-text" id="recPreview">${s.recommendation}</p>
+        <button class="read-more-btn" id="readMoreBtn">Read full recommendation →</button>
+      </div>` : ""}
+
+      <div class="card">
+        <h3>AI Confidence</h3>
+        <p class="confidence-value">${s.confidence}%</p>
+        <div class="confidence-bar-bg"><div class="confidence-bar-fill" style="width:${s.confidence}%"></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Environmental Conditions</h3>
+        <div class="data-row"><span>Temperature</span><span>${s.temperature ?? "—"}°C</span></div>
+        <div class="data-row"><span>Humidity</span><span>${s.humidity ?? "—"}%</span></div>
+        <div class="data-row"><span>Soil Moisture</span><span>${s.soil_moisture ?? "—"}%</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Scan Information</h3>
+        <div class="data-row"><span>Status</span><span>${s.status}</span></div>
+        <div class="data-row"><span>Location</span><span>${s.location || "—"}</span></div>
+        <div class="data-row"><span>Rover ID</span><span>${s.rover_id || "—"}</span></div>
+        <div class="data-row"><span>Timestamp</span><span>${new Date(s.timestamp + "Z").toLocaleString()}</span></div>
+        <div class="data-row"><span>Scan ID</span><span>#${s.id}</span></div>
+      </div>
+    `;
+
+    setupGallery(mediaItems);
+    setupRecommendation(s.recommendation);
+
+    document.getElementById("downloadVideoBtn").addEventListener("click", () => {
+      const video = mediaItems.find(m => m.type === "video");
+      if (video) downloadFile(video.url, `scan_${s.id}_video.mp4`);
+    });
+
+    document.getElementById("downloadImagesBtn").addEventListener("click", () => {
+      const images = mediaItems.filter(m => m.type === "image");
+      images.forEach((img, i) => {
+        setTimeout(() => downloadFile(img.url, `scan_${s.id}_image_${i + 1}.jpg`), i * 400);
+      });
+    });
+
+    document.getElementById("downloadReportBtn").addEventListener("click", (e) => downloadReport(s, e.target));
+  }
+
+  function setupGallery(mediaItems) {
+    const track = document.getElementById("galleryTrack");
+    const dotsContainer = document.getElementById("galleryDots");
+    const label = document.getElementById("galleryLabel");
+    const prevArrow = document.getElementById("prevArrow");
+    const nextArrow = document.getElementById("nextArrow");
+
+    if (mediaItems.length <= 1) {
+      prevArrow.classList.add("hidden");
+      nextArrow.classList.add("hidden");
+      dotsContainer.classList.add("hidden");
+      if (mediaItems.length === 1) {
+        label.textContent = mediaItems[0].type === "video" ? "🎥 Rover Clip" : "📷 Snapshot";
+      } else {
+        label.style.display = "none";
+      }
+      return;
+    }
+
+    mediaItems.forEach((_, i) => {
+      const dot = document.createElement("span");
+      dot.className = "dot" + (i === 0 ? " active" : "");
+      dotsContainer.appendChild(dot);
+    });
+    const dots = dotsContainer.querySelectorAll(".dot");
+
+    function updateActiveDot() {
+      const index = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, i) => d.classList.toggle("active", i === index));
+      label.textContent = mediaItems[index].type === "video" ? "🎥 Rover Clip" : "📷 Snapshot";
+    }
+
+    track.addEventListener("scroll", () => {
+      clearTimeout(track._scrollTimeout);
+      track._scrollTimeout = setTimeout(updateActiveDot, 80);
+    });
+
+    prevArrow.addEventListener("click", () => track.scrollBy({ left: -track.clientWidth, behavior: "smooth" }));
+    nextArrow.addEventListener("click", () => track.scrollBy({ left: track.clientWidth, behavior: "smooth" }));
+
+    updateActiveDot();
+  }
+
+  function setupRecommendation(text) {
+    if (!text) return;
+    const preview = document.getElementById("recPreview");
+    const readMoreBtn = document.getElementById("readMoreBtn");
+    const recModal = document.getElementById("recModal");
+    const recFullText = document.getElementById("recFullText");
+
+    recFullText.textContent = text;
+
+    requestAnimationFrame(() => {
+      const isOverflowing = preview.scrollHeight > preview.clientHeight + 2;
+      if (!isOverflowing) readMoreBtn.classList.add("hidden");
+    });
+
+    readMoreBtn.addEventListener("click", () => recModal.classList.add("show"));
+    document.getElementById("closeRecModal").addEventListener("click", () => recModal.classList.remove("show"));
+    recModal.addEventListener("click", (e) => { if (e.target === recModal) recModal.classList.remove("show"); });
+  }
+
+  function downloadFile(url, filename) {
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // ---------- DOWNLOAD REPORT (fixed) ----------
+  async function downloadReport(s, btn) {
+    btn.disabled = true;
+    btn.classList.add("loading");
+    btn.textContent = "Generating...";
+
+    const firstImage = mediaItems.find(m => m.type === "image");
+    const hasVideo = mediaItems.some(m => m.type === "video");
+    const imageCount = mediaItems.filter(m => m.type === "image").length;
+
+    // Convert the image to base64 BEFORE building the report,
+    // so html2canvas never has to touch a cross-origin URL directly.
+    let imageDataUrl = null;
+    if (firstImage) {
+      imageDataUrl = await urlToBase64(firstImage.url);
+    }
+
+    const reportHTML = `
+      <div class="report-page">
+        <div class="report-header">
+          <h1>🌱 Smart Farm Rover — Scan Report</h1>
+          <div class="report-meta">
+            Generated: ${new Date().toLocaleString()}<br>
+            Scan ID: #${s.id}
+          </div>
+        </div>
+
+        ${imageDataUrl ? `
+          <img src="${imageDataUrl}" class="report-img">
+          <p class="report-img-caption">${imageCount > 1 ? `Primary image (${imageCount} total images captured for this scan)` : "Image captured during scan"}</p>
+        ` : (firstImage ? `<p class="report-img-caption">⚠ Image could not be loaded for this report.</p>` : "")}
+
+        ${hasVideo ? `<div class="report-video-note">🎥 A video clip was also captured for this scan. Video cannot be embedded in a PDF — download it separately from the Scan Detail page.</div>` : ""}
+
+        <div class="report-section">
+          <h3>Detection Summary</h3>
+          <div class="report-row"><span>Crop Type</span><span>${s.crop_type}</span></div>
+          <div class="report-row"><span>Status</span><span>${s.status}</span></div>
+          <div class="report-row"><span>Disease</span><span>${s.disease_name || "None detected"}</span></div>
+          <div class="report-row"><span>Severity</span><span>${s.severity || "—"}</span></div>
+          <div class="report-row"><span>AI Confidence</span><span>${s.confidence}%</span></div>
+        </div>
+
+        <div class="report-section">
+          <h3>Recommendation</h3>
+          <p style="font-size:12.5px; line-height:1.6;">${s.recommendation || "No specific action required."}</p>
+        </div>
+
+        <div class="report-section">
+          <h3>Environmental Conditions</h3>
+          <div class="report-row"><span>Temperature</span><span>${s.temperature ?? "—"}°C</span></div>
+          <div class="report-row"><span>Humidity</span><span>${s.humidity ?? "—"}%</span></div>
+          <div class="report-row"><span>Soil Moisture</span><span>${s.soil_moisture ?? "—"}%</span></div>
+        </div>
+
+        <div class="report-section">
+          <h3>Scan Metadata</h3>
+          <div class="report-row"><span>Location</span><span>${s.location || "—"}</span></div>
+          <div class="report-row"><span>Rover ID</span><span>${s.rover_id || "—"}</span></div>
+          <div class="report-row"><span>Timestamp</span><span>${new Date(s.timestamp + "Z").toLocaleString()}</span></div>
+        </div>
+
+        <div class="report-footer">Smart Farm Rover — Automated Crop Health Report</div>
+      </div>
+    `;
+
+    const reportContainer = document.getElementById("reportTemplate");
+    reportContainer.innerHTML = reportHTML;
+
+    try {
+      await html2pdf().set({
+        margin: 0,
+        filename: `ScanReport_${s.crop_type}_${s.id}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
+      }).from(reportContainer).save();
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      alert("Something went wrong generating the report. Check the console for details.");
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("loading");
+      btn.textContent = "📄 Report";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", loadScan);
+</script>
+
+</body>
+</html>

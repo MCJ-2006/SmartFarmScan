@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Farm Rover Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --green: #256d29; --green-light: #4caf50; --green-soft: #6fbf73; --green-bg: #eaf6eb;
+    --orange: #f57c00; --red: #e53935; --danger: #ff5252; --blue: #1e88e5;
+    --yellow: #f4c430; --offline-gray: #555;
+    --bg: #f4f7f5; --card-bg: #ffffff; --text-dark: #14201a; --text-muted: #6b7570;
+    --border: #eaeeeb; --radius: 18px; --radius-sm: 14px;
+    --shadow: 0 1px 3px rgba(20,32,26,0.06), 0 6px 20px rgba(20,32,26,0.05);
+    --shadow-hover: 0 10px 28px rgba(37,109,41,0.16);
+    --transition: 0.25s cubic-bezier(.4,0,.2,1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-dark); padding-bottom: 90px; }
+
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 64px;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; border-bottom: 1px solid var(--border); z-index: 100;
+  }
+  .nav-title-wrap { display: flex; align-items: center; gap: 8px; }
+  .nav-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-light); box-shadow: 0 0 0 4px rgba(76,175,80,0.15); }
+  .nav-title { font-size: 17px; font-weight: 800; }
+  .avatar-link { text-decoration: none; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-soft) 100%);
+    color: #fff; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn { background: none; border: none; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-dark); }
+  .icon-btn:hover { background: var(--green-bg); }
+
+  .main-content { max-width: 1120px; margin: 0 auto; padding: 84px 16px 40px; }
+
+  /* HERO */
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(155deg, #1f5f24 0%, #2e8b32 55%, #4caf50 100%);
+    border-radius: var(--radius); padding: 26px 24px; color: #fff;
+    margin-bottom: 22px; box-shadow: 0 12px 30px rgba(30,90,35,0.28);
+  }
+  .hero-glow { position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none; }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; }
+  .hero-label { font-size: 12.5px; opacity: 0.85; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .hero-score { font-size: 40px; font-weight: 900; line-height: 1; }
+  .hero-score .pct { font-size: 22px; font-weight: 700; opacity: 0.85; }
+  .hero-tag { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; }
+  .hero-tag.warn { background: rgba(255,82,82,0.3); }
+
+  /* ROVER STATUS — yellow if online, gray/black if offline */
+  .hero-status {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.18);
+    padding: 7px 13px; border-radius: 20px;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; transition: background 0.3s ease; }
+  .status-dot.online { background: var(--yellow); box-shadow: 0 0 0 3px rgba(244,196,48,0.35); animation: pulse 2s infinite; }
+  .status-dot.offline { background: var(--offline-gray); box-shadow: none; animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .hero-meta { display: flex; align-items: center; gap: 18px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.22); }
+  .meta-item { display: flex; flex-direction: column; }
+  .meta-label { font-size: 11.5px; opacity: 0.8; }
+  .meta-value { font-size: 15px; font-weight: 700; }
+  .meta-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.22); }
+
+  .hero-charts { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 22px; }
+  .chart-box { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--radius-sm); padding: 16px; }
+  .donut-box { position: relative; height: 180px; display: flex; align-items: center; justify-content: center; }
+  .donut-center { position: absolute; display: flex; flex-direction: column; align-items: center; }
+  .donut-center span { font-size: 22px; font-weight: 800; }
+  .donut-center small { font-size: 11px; opacity: 0.85; }
+  .trend-box { height: 180px; }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; opacity: 0.95; }
+
+  .donut-legend { display: flex; gap: 20px; justify-content: center; margin-top: 14px; font-size: 12px; }
+  .donut-legend b { font-weight: 800; }
+  .donut-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .donut-legend .healthy { background: #fff; }
+  .donut-legend .diseased { background: var(--danger); box-shadow: 0 0 0 3px rgba(255,82,82,0.25); }
+
+  /* ACTION CARDS */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+  .action-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); cursor: pointer; transition: transform var(--transition), box-shadow var(--transition); }
+  .action-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+  .action-card h3 { font-size: 13.5px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; }
+  .action-value { font-size: 25px; font-weight: 800; }
+  .action-value span { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+  .action-subtext { font-size: 13px; color: var(--text-muted); }
+
+  /* SECTIONS */
+  .section-block { margin-bottom: 30px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .section-header h3 { font-size: 16px; font-weight: 700; }
+  .see-all { font-size: 13px; color: var(--green); font-weight: 600; text-decoration: none; }
+
+  /* ALERTS */
+  .alert-list { display: flex; flex-direction: column; gap: 10px; }
+  .alert-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); cursor: pointer; transition: transform var(--transition); position: relative; overflow: hidden; }
+  .alert-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .alert-card.sev-high::before { background: var(--red); }
+  .alert-card.sev-medium::before { background: #f9a825; }
+  .alert-card.sev-low::before { background: var(--green); }
+  .alert-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .alert-info { flex: 1; min-width: 0; }
+  .alert-crop { font-size: 14px; font-weight: 700; }
+  .alert-disease { font-size: 12.5px; color: var(--text-muted); }
+  .alert-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .severity-badge { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .severity-high { background: #ffebee; color: var(--red); }
+  .severity-medium { background: #fff8e1; color: #f9a825; }
+  .severity-low { background: var(--green-bg); color: var(--green); }
+  .empty-state { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0; }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; box-shadow: var(--shadow); }
+  .stat-icon { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .stat-icon.green { background: var(--green-bg); color: var(--green); }
+  .stat-icon.red { background: #ffebee; color: var(--red); }
+  .stat-icon.orange { background: #fff3e0; color: var(--orange); }
+  .stat-icon.blue { background: #e3f2fd; color: var(--blue); }
+  .stat-value { font-size: 23px; font-weight: 800; }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  /* CHARTS GRID */
+  .charts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .chart-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); height: 240px; }
+  .chart-card .chart-title { color: var(--text-dark); font-weight: 700; }
+  .chart-card.wide { height: 260px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    display: flex; justify-content: space-around; align-items: center;
+    border-top: 1px solid var(--border); z-index: 100;
+  }
+  .bnav-item {
+    background: none; border: none; cursor: pointer; text-decoration: none;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--text-muted); font-size: 10.5px; font-weight: 600;
+    padding: 8px 16px; border-radius: 14px;
+  }
+  .bnav-item.active { color: var(--green); background: var(--green-bg); }
+
+  @media (min-width: 769px) {
+    .hero-charts { grid-template-columns: 1fr 1.4fr; }
+    .stats-grid { grid-template-columns: repeat(4, 1fr); }
+    .charts-grid { grid-template-columns: 1fr 1fr; }
+    .chart-card.wide { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="navbar">
+    <!-- Hamburger kept as decorative for now — not wired to anything yet -->
+    <button class="icon-btn" id="menuBtn">☰</button>
+    <div class="nav-title-wrap">
+      <span class="nav-logo-dot"></span>
+      <h1 class="nav-title">Smart Farm Rover</h1>
+    </div>
+    <a href="../profile/profile.html" class="avatar-link">
+      <div class="avatar" id="avatarInitials">FA</div>
+    </a>
+  </header>
+
+  <main class="main-content">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-top">
+        <div>
+          <p class="hero-label">Farm Health Score</p>
+          <h2 class="hero-score" id="heroScore">--<span class="pct">%</span></h2>
+          <span class="hero-tag" id="heroTag">Loading...</span>
+        </div>
+        <div class="hero-status">
+          <span class="status-dot offline" id="roverStatusDot"></span>
+          <span id="roverStatusText">Checking rover...</span>
+        </div>
+      </div>
+
+      <div class="hero-meta">
+        <div class="meta-item">
+          <span class="meta-label">Last Scan</span>
+          <span class="meta-value" id="lastScanTime">--</span>
+        </div>
+        <div class="meta-divider"></div>
+        <div class="meta-item">
+          <span class="meta-label">Scans Today</span>
+          <span class="meta-value" id="cropsMonitored">--</span>
+        </div>
+      </div>
+
+      <div class="hero-charts">
+        <div class="chart-box donut-box">
+          <canvas id="healthDonutChart"></canvas>
+          <div class="donut-center">
+            <span id="donutHealthy">--%</span>
+            <small>Healthy</small>
+          </div>
+        </div>
+        <div class="chart-box trend-box">
+          <p class="chart-title">Today's Health Trend</p>
+          <canvas id="trendLineChart"></canvas>
+        </div>
+      </div>
+
+      <div class="donut-legend">
+        <span><i class="dot healthy"></i>Healthy — <b id="legendHealthyCount">0</b></span>
+        <span><i class="dot diseased"></i>Diseased — <b id="legendDiseasedCount">0</b></span>
+      </div>
+    </section>
+
+    <!-- ACTION CARDS -->
+    <section class="card-grid">
+      <div class="action-card" id="scansCard">
+        <h3>Today's Scans</h3>
+        <p class="action-value" id="todaysScansValue">-- <span>Scans</span></p>
+      </div>
+      <div class="action-card" id="historyCard">
+        <h3>History</h3>
+        <p class="action-subtext">View all past scan records</p>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section class="section-block">
+      <div class="section-header">
+        <h3>Recent Disease Alerts</h3>
+        <a href="../scan_page/today_scan.html" class="see-all">See all</a>
+      </div>
+      <div class="alert-list" id="alertList">
+        <p class="empty-state">Loading alerts...</p>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="section-block">
+      <div class="section-header"><h3>Farm Statistics</h3></div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon green">✔</div>
+          <p class="stat-value" id="statHealthy">0</p>
+          <p class="stat-label">Healthy Plants</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red">!</div>
+          <p class="stat-value" id="statDiseased">0</p>
+          <p class="stat-label">Diseased Plants</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">▲</div>
+          <p class="stat-value" id="statHighSeverity">0</p>
+          <p class="stat-label">High Severity Cases</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">%</div>
+          <p class="stat-value" id="statConfidence">0%</p>
+          <p class="stat-label">Avg AI Confidence</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="section-block">
+      <div class="section-header"><h3>Analytics</h3></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <p class="chart-title">Healthy vs Diseased</p>
+          <canvas id="statusDoughnutChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title">Daily Health Trend</p>
+          <canvas id="mainLineChart"></canvas>
+        </div>
+        <div class="chart-card wide">
+          <p class="chart-title">Disease Distribution</p>
+          <canvas id="diseaseBarChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="bnav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="../scan_page/today_scan.html" class="bnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+      <span>Scans</span>
+    </a>
+    <a href="../scan_page/history_scan.html" class="bnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>History</span>
+    </a>
+    <a href="../profile/profile.html" class="bnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000/api/scans";
+  const AUTH_BASE = "http://127.0.0.1:5000/api/auth";
+  const ONLINE_THRESHOLD_MINUTES = 10; // rover counted "online" if last scan was within this window
+  let heroDonutChart, trendChart, statusChart, mainLineChart, barChart;
+
+  async function loadProfileBadge() {
+    try {
+      const res = await fetch(`${AUTH_BASE}/me`, { credentials: "include" });
+      const data = await res.json();
+      if (res.ok && data.farmer) {
+        document.getElementById("avatarInitials").textContent = data.farmer.username.slice(0, 2).toUpperCase();
+      }
+    } catch (err) { /* not logged in yet — leave default "FA" */ }
+  }
+
+  async function loadDashboard() {
+    try {
+      const res = await fetch(`${API_BASE}/today`);
+      const data = await res.json();
+      const scans = data.scans || [];
+
+      const total = scans.length;
+      const healthy = scans.filter(s => s.status === "healthy").length;
+      const diseased = scans.filter(s => s.status === "diseased").length;
+      const healthyPct = total ? Math.round((healthy / total) * 100) : 100;
+      const diseasedPct = 100 - healthyPct;
+      const highSeverity = scans.filter(s => s.severity === "high").length;
+      const avgConfidence = total ? Math.round(scans.reduce((sum, s) => sum + s.confidence, 0) / total) : 0;
+
+      // ---- ROVER ONLINE/OFFLINE CHECK ----
+      updateRoverStatus(scans[0] ? scans[0].timestamp : null);
+
+      const lastScan = scans[0] ? new Date(scans[0].timestamp + "Z").toLocaleTimeString() : "No scans yet";
+
+      document.getElementById("heroScore").innerHTML = `${healthyPct}<span class="pct">%</span>`;
+      document.getElementById("donutHealthy").textContent = `${healthyPct}%`;
+      document.getElementById("lastScanTime").textContent = lastScan;
+      document.getElementById("cropsMonitored").textContent = total;
+      document.getElementById("legendHealthyCount").textContent = healthy;
+      document.getElementById("legendDiseasedCount").textContent = diseased;
+      document.getElementById("todaysScansValue").innerHTML = `${total} <span>Scans</span>`;
+
+      const tag = document.getElementById("heroTag");
+      if (diseasedPct >= 15) { tag.textContent = "Needs Attention"; tag.classList.add("warn"); }
+      else { tag.textContent = "Healthy"; tag.classList.remove("warn"); }
+
+      document.getElementById("statHealthy").textContent = healthy;
+      document.getElementById("statDiseased").textContent = diseased;
+      document.getElementById("statHighSeverity").textContent = highSeverity;
+      document.getElementById("statConfidence").textContent = `${avgConfidence}%`;
+
+      renderAlerts(scans.filter(s => s.status === "diseased").slice(0, 3));
+      renderCharts(healthyPct, diseasedPct, scans);
+
+    } catch (err) {
+      console.error(err);
+      document.getElementById("alertList").innerHTML = `<p class="empty-state">Could not connect to backend. Is Flask running?</p>`;
+      updateRoverStatus(null); // backend unreachable = definitely offline
+    }
+  }
+
+  // ---------- ROVER STATUS: yellow = online, gray/black = offline ----------
+  function updateRoverStatus(lastScanTimestamp) {
+    const dot = document.getElementById("roverStatusDot");
+    const text = document.getElementById("roverStatusText");
+
+    if (!lastScanTimestamp) {
+      dot.classList.remove("online");
+      dot.classList.add("offline");
+      text.textContent = "Rover Offline";
+      return;
+    }
+
+    const lastScanTime = new Date(lastScanTimestamp + "Z");
+    const minutesSince = (Date.now() - lastScanTime.getTime()) / 60000;
+
+    if (minutesSince <= ONLINE_THRESHOLD_MINUTES) {
+      dot.classList.remove("offline");
+      dot.classList.add("online");
+      text.textContent = "Rover Online";
+    } else {
+      dot.classList.remove("online");
+      dot.classList.add("offline");
+      text.textContent = "Rover Offline";
+    }
+  }
+
+  function renderAlerts(scans) {
+    const list = document.getElementById("alertList");
+    if (!scans.length) {
+      list.innerHTML = `<p class="empty-state">No disease alerts today.</p>`;
+      return;
+    }
+    list.innerHTML = scans.map(s => `
+      <div class="alert-card sev-${s.severity || 'low'}" onclick="location.href='../scan_page/scan_detail.html?id=${s.id}'">
+        <div class="alert-info">
+          <p class="alert-crop">${s.crop_type}</p>
+          <p class="alert-disease">${s.disease_name || "Unknown"}</p>
+          <p class="alert-time">${new Date(s.timestamp + "Z").toLocaleString()}</p>
+        </div>
+        <span class="severity-badge severity-${s.severity || 'low'}">${(s.severity || 'low').toUpperCase()}</span>
+      </div>
+    `).join("");
+  }
+
+  function renderCharts(healthyPct, diseasedPct, scans) {
+    Chart.defaults.font.family = "Inter, sans-serif";
+    const danger = "#ff5252", greenA = "#256d29", greenB = "#4caf50", redA = "#e53935";
+
+    [heroDonutChart, trendChart, statusChart, mainLineChart, barChart].forEach(c => c && c.destroy());
+
+    heroDonutChart = new Chart(document.getElementById("healthDonutChart"), {
+      type: "doughnut",
+      data: { labels: ["Healthy", "Diseased"], datasets: [{ data: [healthyPct, diseasedPct], backgroundColor: ["#ffffff", danger], borderWidth: 0 }] },
+      options: { cutout: "76%", plugins: { legend: { display: false } } }
+    });
+
+    const hourlyMap = {};
+    scans.forEach(s => {
+      const hr = new Date(s.timestamp + "Z").getHours();
+      if (!hourlyMap[hr]) hourlyMap[hr] = { healthy: 0, total: 0 };
+      hourlyMap[hr].total++;
+      if (s.status === "healthy") hourlyMap[hr].healthy++;
+    });
+    const hours = Object.keys(hourlyMap).sort((a,b) => a-b);
+    const trendLabels = hours.map(h => `${h}:00`);
+    const trendValues = hours.map(h => Math.round((hourlyMap[h].healthy / hourlyMap[h].total) * 100));
+
+    trendChart = new Chart(document.getElementById("trendLineChart"), {
+      type: "line",
+      data: { labels: trendLabels.length ? trendLabels : ["--"], datasets: [{ data: trendValues.length ? trendValues : [0], borderColor: "#fff", backgroundColor: "rgba(255,255,255,0.15)", fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: "rgba(255,255,255,0.8)", font: { size: 10 } }, grid: { display: false } }, y: { display: false } } }
+    });
+
+    statusChart = new Chart(document.getElementById("statusDoughnutChart"), {
+      type: "doughnut",
+      data: { labels: ["Healthy", "Diseased"], datasets: [{ data: [healthyPct, diseasedPct], backgroundColor: [greenA, redA], borderWidth: 0 }] },
+      options: { plugins: { legend: { position: "bottom" } } }
+    });
+
+    mainLineChart = new Chart(document.getElementById("mainLineChart"), {
+      type: "line",
+      data: { labels: trendLabels.length ? trendLabels : ["--"], datasets: [{ label: "Health %", data: trendValues.length ? trendValues : [0], borderColor: greenA, backgroundColor: "rgba(37,109,41,0.1)", fill: true, tension: 0.4 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
+    });
+
+    const diseaseCounts = {};
+    scans.filter(s => s.status === "diseased" && s.disease_name).forEach(s => {
+      diseaseCounts[s.disease_name] = (diseaseCounts[s.disease_name] || 0) + 1;
+    });
+
+    barChart = new Chart(document.getElementById("diseaseBarChart"), {
+      type: "bar",
+      data: { labels: Object.keys(diseaseCounts), datasets: [{ label: "Cases", data: Object.values(diseaseCounts), backgroundColor: greenB, borderRadius: 8, maxBarThickness: 40 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  document.getElementById("scansCard").addEventListener("click", () => location.href = "../scan_page/today_scan.html");
+  document.getElementById("historyCard").addEventListener("click", () => location.href = "../scan_page/history_scan.html");
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadProfileBadge();
+    loadDashboard();
+    // Recheck rover status every minute so it doesn't need a manual refresh to flip offline
+    setInterval(loadDashboard, 60000);
+  });
+</script>
+
+</body>
+</html>

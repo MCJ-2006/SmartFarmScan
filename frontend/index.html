@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — Smart Farm Rover</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #256d29; --green-light: #4caf50; --green-bg: #eaf6eb;
+    --red: #e53935; --bg: #f4f7f5; --card-bg: #ffffff;
+    --text-dark: #14201a; --text-muted: #6b7570; --border: #eaeeeb;
+    --radius: 18px; --shadow: 0 1px 3px rgba(20,32,26,0.06), 0 6px 20px rgba(20,32,26,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-dark);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .auth-card {
+    background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 32px 26px; width: 100%; max-width: 380px;
+  }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green-light); display: inline-block; margin-right: 8px; }
+  h1 { font-size: 20px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; }
+  p.subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+  label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; margin-top: 14px; color: var(--text-muted); }
+  label:first-of-type { margin-top: 0; }
+  input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: #f9faf9;
+  }
+  input:focus { outline: none; border-color: var(--green); }
+
+  button {
+    width: 100%; background: var(--green); color: #fff; border: none;
+    padding: 14px; border-radius: 10px; font-weight: 700; font-size: 14px;
+    cursor: pointer; margin-top: 20px;
+  }
+  button:hover { background: #1e5722; }
+  button:disabled { background: #a0a8a2; cursor: not-allowed; }
+
+  .switch-link { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 18px; }
+  .switch-link a { color: var(--green); font-weight: 700; text-decoration: none; }
+
+  #status { margin-top: 14px; padding: 10px; border-radius: 8px; font-size: 12.5px; display: none; }
+  .error { background: #ffebee; color: var(--red); display: block !important; }
+  .success { background: var(--green-bg); color: var(--green); display: block !important; }
+</style>
+</head>
+<body>
+
+  <div class="auth-card">
+    <h1><span class="logo-dot"></span>Create Account</h1>
+    <p class="subtitle">Set up your Smart Farm Rover profile</p>
+
+    <form id="registerForm">
+      <label>Username</label>
+      <input type="text" id="username" required>
+
+      <label>Email</label>
+      <input type="email" id="email" required>
+
+      <label>Farm Name (optional)</label>
+      <input type="text" id="farmName">
+
+      <label>Password</label>
+      <input type="password" id="password" required>
+
+      <button type="submit" id="submitBtn">Create Account</button>
+    </form>
+
+    <div id="status"></div>
+
+    <p class="switch-link">Already have an account? <a href="auth/login.html">Log in</a></p>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000/api/auth";
+
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const statusBox = document.getElementById("status");
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account...";
+
+    const payload = {
+      username: document.getElementById("username").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      farm_name: document.getElementById("farmName").value.trim(),
+      password: document.getElementById("password").value
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        statusBox.className = "success";
+        statusBox.textContent = "✅ Account created! Redirecting to login...";
+        setTimeout(() => window.location.href = "../auth/login.html", 1200);
+      } else {
+        statusBox.className = "error";
+        statusBox.textContent = `❌ ${data.message}`;
+      }
+    } catch (err) {
+      statusBox.className = "error";
+      statusBox.textContent = "❌ Could not reach backend. Is Flask running?";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create Account";
+    }
+  });
+</script>
+
+</body>
+</html>
