@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+
+# Database
+instance/
+*.db
+
+# Uploaded files
+backend/static/uploads/
+
+# Environment
+.env
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
